@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -120,7 +121,10 @@ export default function TestPage({ params }: { params: Promise<{ domain: string 
     return (
         <div className="container mx-auto py-10 px-4">
             <div className="flex justify-between items-center mb-6 sticky top-0 bg-background z-10 py-4 border-b">
-                <h1 className="text-2xl font-bold capitalize">{domain.replace('-', ' ')} Test</h1>
+                <div className="flex items-center gap-4">
+                    <Image src="/assessifyLogo.svg" alt="Assessify Logo" width={120} height={32} className="h-8 w-auto" />
+                    <h1 className="text-2xl font-bold capitalize">{domain.replace('-', ' ')} Test</h1>
+                </div>
                 <div className={`text-xl font-mono ${timeLeft < 60 ? 'text-red-500' : ''}`}>
                     Time Left: {formatTime(timeLeft)}
                 </div>

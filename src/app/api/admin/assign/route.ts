@@ -3,20 +3,25 @@ import pool from '@/lib/db';
 
 export async function POST(request: Request) {
     try {
-        const { email, domain } = await request.json(); // Using email to find user for better UX
+        // Now only email is required. Domain is fetched from User.
+        const { email } = await request.json();
 
-        if (!email || !domain) {
-            return NextResponse.json({ error: 'Email and domain required' }, { status: 400 });
+        if (!email) {
+            return NextResponse.json({ error: 'Email is required' }, { status: 400 });
         }
 
         const client = await pool.connect();
         try {
-            // Find user ID
-            const userRes = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+            // Find user ID and Domain
+            const userRes = await client.query('SELECT id, domain FROM users WHERE email = $1', [email]);
             if (userRes.rows.length === 0) {
                 return NextResponse.json({ error: 'User not found' }, { status: 404 });
             }
-            const userId = userRes.rows[0].id;
+            const { id: userId, domain } = userRes.rows[0];
+
+            if (!domain) {
+                return NextResponse.json({ error: 'User has no domain assigned. Please update user profile first.' }, { status: 400 });
+            }
 
             // Assign
             await client.query(
@@ -24,7 +29,7 @@ export async function POST(request: Request) {
                 [userId, domain, 'pending']
             );
 
-            return NextResponse.json({ success: true, message: 'Test assigned successfully' });
+            return NextResponse.json({ success: true, message: `Test assigned for domain: ${domain}` });
         } finally {
             client.release();
         }

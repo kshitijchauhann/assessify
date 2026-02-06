@@ -7,6 +7,7 @@ import { signIn } from 'next-auth/react'; // Need to install next-auth/react cli
 
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
@@ -48,7 +49,10 @@ export default function LoginPage() {
         <div className="flex h-screen items-center justify-center bg-gray-50">
             <Card className="w-full max-w-sm shadow-md">
                 <CardHeader className="text-center">
-                    <CardTitle className="text-2xl">Assessify Login</CardTitle>
+                    <div className="flex justify-center mb-4">
+                        <Image src="/assessifyLogo.svg" alt="Assessify Logo" width={120} height={32} className="h-8 w-auto" />
+                    </div>
+                    <CardTitle className="text-2xl">Login</CardTitle>
                     <CardDescription>Enter your credentials to access the platform</CardDescription>
                 </CardHeader>
                 <CardContent>

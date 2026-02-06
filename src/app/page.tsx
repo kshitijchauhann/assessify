@@ -1,27 +1,43 @@
-import Link from 'next/link';
+import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth";
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
 
   if (session) {
-    redirect('/dashboard');
+    redirect("/dashboard");
   }
 
   return (
     <div className="flex flex-col min-h-screen">
       <header className="px-4 lg:px-6 h-14 flex items-center border-b">
-        <Link className="flex items-center justify-center font-bold text-xl" href="#">
-          Assessify
+        <Link
+          className="flex items-center justify-center font-bold text-xl"
+          href="#"
+        >
+          <Image
+            src="/assessifyLogo.svg"
+            alt="Assessify Logo"
+            width={150}
+            height={40}
+            className="h-10 w-auto"
+          />
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link className="text-sm font-medium hover:underline underline-offset-4" href="/login">
+          <Link
+            className="text-sm font-medium hover:underline underline-offset-4"
+            href="/login"
+          >
             Login
           </Link>
-          <Link className="text-sm font-medium hover:underline underline-offset-4" href="/admin/signup">
+          <Link
+            className="text-sm font-medium hover:underline underline-offset-4"
+            href="/admin/signup"
+          >
             Create Admin
           </Link>
         </nav>
@@ -33,31 +49,25 @@ export default async function Home() {
               Professional Skills Assessment
             </h1>
             <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400 mt-4">
-              Validate your expertise in Business Analytics, Quality Assurance, Data Engineering, and more.
-              Get assigned tests by recruiters and showcase your potential.
+              Validate your expertise in Business Analytics, Quality Assurance,
+              Data Engineering, and more. Get assigned tests by recruiters and
+              showcase your potential.
             </p>
             <div className="space-x-4 mt-8">
               <Link href="/login">
                 <Button size="lg">Get Started</Button>
               </Link>
-              <Link href="/login">
-                <Button variant="outline" size="lg">I have an invite</Button>
+              <Link
+                className="text-sm font-medium hover:underline underline-offset-4"
+                href="/admin/signup"
+              >
+                <Button size="lg">Create Admin</Button>
               </Link>
             </div>
           </div>
         </section>
       </main>
-      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
-        <p className="text-xs text-gray-500 dark:text-gray-400">© 2024 Assessify. All rights reserved.</p>
-        <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-          <Link className="text-xs hover:underline underline-offset-4" href="#">
-            Terms of Service
-          </Link>
-          <Link className="text-xs hover:underline underline-offset-4" href="#">
-            Privacy
-          </Link>
-        </nav>
-      </footer>
+      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t"></footer>
     </div>
   );
 }

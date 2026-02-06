@@ -1,17 +1,27 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import bcrypt from 'bcrypt';
-import { sendEmail } from '@/lib/email';
 
+// GET: List all users
+export async function GET() {
+    try {
+        const client = await pool.connect();
+        try {
+            const result = await client.query('SELECT id, name, email, role, domain FROM users ORDER BY id DESC');
+            return NextResponse.json({ users: result.rows });
+        } finally {
+            client.release();
+        }
+    } catch (error) {
+        console.error('Fetch users error:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}
 
-// Fallback email sender (Log only if no transport available for now, 
-// unless SMTP details are provided in env, which currently aren't standardized in this project)
-// But user requested "via nodemailer or resend". 
-// I will setup a log-only transporter if Resend is missing to simulate sending.
-
+// POST: Create new user
 export async function POST(request: Request) {
     try {
-        const { name, email, password: providedPassword, role = 'user' } = await request.json();
+        const { name, email, password: providedPassword, domain, role = 'user' } = await request.json();
 
         if (!name || !email) {
             return NextResponse.json({ error: 'Name and email required' }, { status: 400 });
@@ -30,30 +40,9 @@ export async function POST(request: Request) {
             }
 
             await client.query(
-                'INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4)',
-                [name, email, passwordHash, role]
+                'INSERT INTO users (name, email, password_hash, role, domain) VALUES ($1, $2, $3, $4, $5)',
+                [name, email, passwordHash, role, domain]
             );
-
-            // Send Email
-            const emailText = `
-                <h1>Welcome to Assessify, ${name}!</h1>
-                <p>Your account has been created successfully.</p>
-                <p><strong>Login Email:</strong> ${email}</p>
-                <p><strong>Password:</strong> ${password}</p>
-                <p>Please login at: <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/login">Assessify Login</a></p>
-            `;
-
-            // Use the new email utility
-            const emailResult = await sendEmail(
-                email,
-                'Assessify Platform Credentials',
-                emailText
-            );
-
-            if (!emailResult.success) {
-                console.warn('Failed to send welcome email:', emailResult.error);
-                // We still return success for user creation, but log the email failure
-            }
 
             return NextResponse.json({ success: true, message: 'User created' });
         } finally {
