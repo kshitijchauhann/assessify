@@ -31,7 +31,14 @@ export default withAuth(
     },
     {
         callbacks: {
-            authorized: ({ token }) => !!token,
+            authorized: ({ token, req }) => {
+                // Allow access to admin signup page without login
+                if (req.nextUrl.pathname === "/admin/signup") {
+                    return true;
+                }
+                // Require login for all other matched paths
+                return !!token;
+            },
         },
     }
 );
