@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const id = await params.id;
+        const { id } = await params;
         const { name, email, domain } = await request.json();
 
         const client = await pool.connect();
@@ -24,9 +24,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const id = await params.id;
+        const { id } = await params;
         const client = await pool.connect();
         try {
             // Note: If you have foreign keys (assignments, results), you might need CASCADE delete 
