@@ -22,7 +22,7 @@ export default async function Home() {
             Login
           </Link>
           <Link className="text-sm font-medium hover:underline underline-offset-4" href="/admin/signup">
-            Admin Access
+            Create Admin
           </Link>
         </nav>
       </header>

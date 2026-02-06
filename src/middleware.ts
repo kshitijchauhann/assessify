@@ -8,6 +8,11 @@ export default withAuth(
 
         // Admin Route Protection
         if (path.startsWith("/admin")) {
+            // CRITICAL: Allow access to admin signup page so users can create the first admin account
+            if (path === "/admin/signup") {
+                return NextResponse.next();
+            }
+
             // If not admin, redirect to dashboard (or login/error page)
             if (token?.role !== "admin") {
                 return NextResponse.redirect(new URL("/dashboard", req.url));
