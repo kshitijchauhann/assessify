@@ -115,23 +115,36 @@ export default function AdminDashboard() {
                                     <TableRow>
                                         <TableHead>Candidate</TableHead>
                                         <TableHead>Domain</TableHead>
-                                        <TableHead>Score</TableHead>
+                                        <TableHead>Correct</TableHead>
+                                        <TableHead>Incorrect</TableHead>
+                                        <TableHead>Left</TableHead>
+                                        <TableHead>Total</TableHead>
                                         <TableHead>Percentage</TableHead>
                                         <TableHead className="text-right">Date</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {results.length === 0 ? (
-                                        <TableRow><TableCell colSpan={5} className="text-center">No results.</TableCell></TableRow>
-                                    ) : results.map((r: any) => (
-                                        <TableRow key={r.id}>
-                                            <TableCell>{r.candidate_name}</TableCell>
-                                            <TableCell>{r.domain}</TableCell>
-                                            <TableCell>{r.score}/{r.total_questions}</TableCell>
-                                            <TableCell>{Number(r.percentage).toFixed(2)}%</TableCell>
-                                            <TableCell className="text-right">{new Date(r.submitted_at).toLocaleDateString()}</TableCell>
-                                        </TableRow>
-                                    ))}
+                                        <TableRow><TableCell colSpan={8} className="text-center">No results.</TableCell></TableRow>
+                                    ) : results.map((r: any) => {
+                                        const attempted = r.attempted ?? r.total_questions; // Fallback for old data
+                                        const correct = r.score;
+                                        const incorrect = attempted - correct;
+                                        const left = r.total_questions - attempted;
+
+                                        return (
+                                            <TableRow key={r.id}>
+                                                <TableCell>{r.candidate_name}</TableCell>
+                                                <TableCell>{r.domain}</TableCell>
+                                                <TableCell className="text-green-600 font-medium">{correct}</TableCell>
+                                                <TableCell className="text-red-500">{incorrect}</TableCell>
+                                                <TableCell className="text-gray-500">{left}</TableCell>
+                                                <TableCell>{r.total_questions}</TableCell>
+                                                <TableCell>{Number(r.percentage).toFixed(2)}%</TableCell>
+                                                <TableCell className="text-right">{new Date(r.submitted_at).toLocaleDateString()}</TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                                 </TableBody>
                             </Table>
                         )}

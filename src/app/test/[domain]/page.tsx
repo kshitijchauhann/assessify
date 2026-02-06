@@ -23,8 +23,8 @@ export default function TestPage({ params }: { params: Promise<{ domain: string 
     const [loading, setLoading] = useState(true);
     const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
     const [answers, setAnswers] = useState<{ [key: string]: string }>({});
-    const [candidateName, setCandidateName] = useState('');
-    const [nameSubmitted, setNameSubmitted] = useState(false);
+    // const [candidateName, setCandidateName] = useState(''); // Removed
+    // const [nameSubmitted, setNameSubmitted] = useState(false); // Removed
     const [submitting, setSubmitting] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
 
@@ -44,7 +44,7 @@ export default function TestPage({ params }: { params: Promise<{ domain: string 
 
     // Timer
     useEffect(() => {
-        if (!nameSubmitted || loading || submitting) return;
+        if (loading || submitting) return;
 
         if (timeLeft <= 0) {
             handleSubmit();
@@ -56,11 +56,33 @@ export default function TestPage({ params }: { params: Promise<{ domain: string 
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [timeLeft, nameSubmitted, loading, submitting]);
+    }, [timeLeft, loading, submitting]);
 
     const handleOptionSelect = (questionText: string, option: string) => {
         setAnswers((prev) => ({ ...prev, [questionText]: option }));
     };
+
+    // Check for existing completion
+    useEffect(() => {
+        if (domain) {
+            // Verify if user has already completed this test (if logged in)
+            fetch('/api/user/assignments')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.assignments) {
+                        const assignment = data.assignments.find((a: any) => a.domain === domain);
+                        if (assignment && assignment.status === 'completed') {
+                            alert("You have already completed this test.");
+                            router.push('/dashboard');
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Ignore error if not logged in or other issue, 
+                    // but ideally we should block if auth is required.
+                });
+        }
+    }, [domain, router]);
 
     const handleSubmit = async () => {
         if (submitting) return;
@@ -72,15 +94,15 @@ export default function TestPage({ params }: { params: Promise<{ domain: string 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     domain,
-                    candidateName,
+                    candidateName: undefined, // Backend relies on session
                     answers,
                 }),
             });
 
             if (response.ok) {
-                const result = await response.json();
-                alert(`Test Submitted!\nScore: ${result.score}/${result.total}\nPercentage: ${result.percentage.toFixed(2)}%`);
-                router.push('/');
+                // Requirement: "should not be able to see result which is displayed after submission"
+                alert("Test Submitted Successfully! Returning to dashboard.");
+                router.push('/dashboard');
             } else {
                 alert('Failed to submit test. Please try again.');
                 setSubmitting(false);
@@ -94,34 +116,7 @@ export default function TestPage({ params }: { params: Promise<{ domain: string 
 
     if (loading) return <div className="text-center mt-20">Loading questions...</div>;
 
-    if (!nameSubmitted) {
-        return (
-            <div className="container mx-auto py-20 max-w-md">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Enter Your Name</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <input
-                            type="text"
-                            placeholder="Full Name"
-                            className="w-full p-2 border rounded"
-                            value={candidateName}
-                            onChange={(e) => setCandidateName(e.target.value)}
-                        />
-                        <Button
-                            className="w-full"
-                            onClick={() => candidateName && setNameSubmitted(true)}
-                            disabled={!candidateName}
-                        >
-                            Start Test
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
+    // Direct render, no name check
     return (
         <div className="container mx-auto py-10 px-4">
             <div className="flex justify-between items-center mb-6 sticky top-0 bg-background z-10 py-4 border-b">

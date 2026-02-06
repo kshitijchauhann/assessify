@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { signOut } from 'next-auth/react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -24,7 +25,12 @@ export default function UserDashboard() {
 
     return (
         <div className="container mx-auto py-10">
-            <h1 className="text-3xl font-bold mb-8">My Assignments</h1>
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold">My Assignments</h1>
+                <Button variant="outline" onClick={() => signOut({ callbackUrl: '/login' })}>
+                    Logout
+                </Button>
+            </div>
 
             {assignments.length === 0 ? (
                 <Card>
