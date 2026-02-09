@@ -39,6 +39,14 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'User already exists' }, { status: 400 });
             }
 
+            // Check if attempting to create an admin and one already exists
+            if (role === 'admin') {
+                const adminCheck = await client.query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
+                if (parseInt(adminCheck.rows[0].count) > 0) {
+                    return NextResponse.json({ error: 'Only one admin is allowed' }, { status: 400 });
+                }
+            }
+
             await client.query(
                 'INSERT INTO users (name, email, password_hash, role, domain) VALUES ($1, $2, $3, $4, $5)',
                 [name, email, passwordHash, role, domain]

@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const allQuestions = domainMap[domain];
 
     // Randomize questions
-    const shuffledQuestions = [...allQuestions].sort(() => 0.5 - Math.random());
+    const shuffledQuestions = [...allQuestions].sort(() => 0.5 - Math.random()).slice(0, 25);
 
     // Take e.g. 20 questions or all of them. Requirement says "Questions are loaded dynamically", 
     // and "10 minutes" duration. 50 questions might be too many for 10 mins, but user didn't specify count.
