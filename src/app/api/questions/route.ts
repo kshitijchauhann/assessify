@@ -1,80 +1,75 @@
 import { NextResponse } from 'next/server';
-
-// Question banks are now modules
-import { questions as baQuestions } from '@/../questions/baquestionbank';
-import { questions as deQuestions } from '@/../questions/dequestionbank';
-import { questions as devopsQuestions } from '@/../questions/devopsquestionbank';
-import { questions as mernQuestions } from '@/../questions/mernquestionbank';
-import { questions as qaQuestions } from '@/../questions/qaquestionbank';
-
-const domainMap: { [key: string]: any[] } = {
-    'business-analytics': baQuestions,
-    'data-engineering': deQuestions,
-    'devops': devopsQuestions,
-    'mern-stack': mernQuestions,
-    'quality-assurance': qaQuestions,
-};
+import pool from '@/lib/db';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const domain = searchParams.get('domain');
 
-    if (!domain || !domainMap[domain]) {
-        return NextResponse.json({ error: 'Invalid or missing domain' }, { status: 400 });
+    if (!domain) {
+        return NextResponse.json({ error: 'Domain is required' }, { status: 400 });
     }
 
-    const allQuestions = domainMap[domain];
+    const client = await pool.connect();
+    try {
+        // Fetch questions for the domain
+        // We can limit or randomize here. The previous logic randomized.
+        // Postgres has ORDER BY RANDOM()
+        const query = `
+            SELECT id, question_text as question, options, correct_answer_index as answer, marks, negative_marks 
+            FROM questions 
+            WHERE domain = $1 
+            ORDER BY RANDOM() 
+            LIMIT 25
+        `;
+        const result = await client.query(query, [domain]);
 
-    // Randomize questions
-    const shuffledQuestions = [...allQuestions].sort(() => 0.5 - Math.random()).slice(0, 25);
+        // Fetch duration
+        const durationRes = await client.query('SELECT duration_minutes FROM test_configs WHERE domain = $1', [domain]);
+        const duration = durationRes.rows.length > 0 ? durationRes.rows[0].duration_minutes : 30;
 
-    // Take e.g. 20 questions or all of them. Requirement says "Questions are loaded dynamically", 
-    // and "10 minutes" duration. 50 questions might be too many for 10 mins, but user didn't specify count.
-    // I'll return all for now or maybe limit to 20 if needed later. Let's return all but shuffled.
-
-    // Also randomize options for each question
-    const randomizedQuestions = shuffledQuestions.map((q) => {
-        // Create a copy of options with their original indices to track the correct answer
-        const optionsWithIndices = q.options.map((opt: string, index: number) => ({
-            text: opt,
-            originalIndex: index,
+        const questions = result.rows.map((q: any) => ({
+            id: q.id,
+            question: q.question,
+            options: q.options, // It's already JSONB, so pg returns object/array
+            answer: q.answer, // sending answer index for now as per previous logic
+            marks: q.marks,
+            negative_marks: q.negative_marks
         }));
 
-        // Shuffle options
-        const shuffledOptions = optionsWithIndices.sort(() => 0.5 - Math.random());
+        // Randomize options logic from before (optional but good for anti-cheating)
+        const randomizedQuestions = questions.map((q: any) => {
+            const optionsWithIndices = q.options.map((opt: string, index: number) => ({
+                text: opt,
+                originalIndex: index,
+            }));
+            const shuffledOptions = optionsWithIndices.sort(() => 0.5 - Math.random());
+            const finalOptions = shuffledOptions.map((o: any) => o.text);
+            const newAnswerIndex = shuffledOptions.findIndex((o: any) => o.originalIndex === q.answer);
 
-        // Map back to simple string array
-        const finalOptions = shuffledOptions.map((o: any) => o.text);
+            return {
+                id: q.id, // Keep DB ID
+                question: q.question,
+                options: finalOptions,
+                marks: q.marks,
+                negative_marks: q.negative_marks,
+                // We are NOT sending the answer back in this response for security?
+                // The previous code DID send it implicitly via finding new index but the return object in previous code 
+                // in my view_file output (Step 77) loop returned:
+                // { question, options, id: base64(text) }
+                // It did NOT return 'answer'.
+                // So I should NOT return answer.
+            };
+        });
 
-        // Find new correct answer index
-        // The original answer is an index. We need to find where that index moved to.
-        const newAnswerIndex = shuffledOptions.findIndex((o: any) => o.originalIndex === q.answer);
+        return NextResponse.json({
+            questions: randomizedQuestions,
+            duration: duration
+        });
 
-        return {
-            question: q.question,
-            options: finalOptions,
-            // We should probably NOT send the answer to the client if we want secure testing,
-            // but for "auto-submit" and client-side timer enforcement mentioned, 
-            // usually validation happens on server.
-            // However, if we want to validate on server, we need to store the "session" or 
-            // send the answer back securely or just validate on submit.
-            // For simplicity in this iteration, I won't send the answer key to the client.
-            // I will only send the question and options.
-            // The submit API will need to re-fetch/re-calculate or trust the client? 
-            // "Trusting the client" is bad. 
-            // But since I randomize on GET, I can't easily validate on POST unless I store the seed or the specific questions sent.
-            // OR, the user receives the FULL question object but "answer" is hidden? 
-            // Actually, to validate on server, I need to know WHICH questions were sent and in what order? 
-            // No, I just need to know the question ID. But these questions don't have IDs.
-            // I will generate a temporary ID (hash or index) or just send the full question text back on submit to verify?
-            // Or I can send the answer index but encrypted?
-            // Let's stick to simple: Send questions without answers. 
-            // On submit, the client sends { question: "text", selectedOption: "text" } 
-            // and server finds the question by text and checks the answer.
-            // This assumes question text is unique (which it seems to be).
-            id: Buffer.from(q.question).toString('base64'), // Simple ID from question text
-        };
-    });
-
-    return NextResponse.json({ questions: randomizedQuestions });
+    } catch (error: any) {
+        console.error('Error fetching questions:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    } finally {
+        client.release();
+    }
 }

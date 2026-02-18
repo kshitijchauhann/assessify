@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import Image from 'next/image';
 import { Input } from "@/components/ui/input";
+import { signOut } from "next-auth/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
     Table,
@@ -24,10 +25,12 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
+
 export default function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState('results'); // 'results' | 'users'
+    const [activeTab, setActiveTab] = useState('results'); // 'results' | 'users' | 'upload' | 'tests'
     const [results, setResults] = useState([]);
     const [users, setUsers] = useState([]);
+    const [tests, setTests] = useState([]);
     const [loading, setLoading] = useState(false);
 
     // User Creation Form
@@ -42,9 +45,22 @@ export default function AdminDashboard() {
     const [editingUser, setEditingUser] = useState<any>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
 
+    // Upload Questions Form
+    const [uploadDomain, setUploadDomain] = useState('');
+    const [marks, setMarks] = useState(1);
+    const [negativeMarking, setNegativeMarking] = useState(false);
+    const [negativeMarks, setNegativeMarks] = useState(0);
+    const [file, setFile] = useState<File | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [assignToAll, setAssignToAll] = useState(false);
+    const [assignToAllDomains, setAssignToAllDomains] = useState(false);
+    const [duration, setDuration] = useState(30);
+
+
     useEffect(() => {
         if (activeTab === 'results') fetchResults();
         if (activeTab === 'users') fetchUsers();
+        if (activeTab === 'tests') fetchTests();
     }, [activeTab]);
 
     const fetchResults = () => {
@@ -61,6 +77,15 @@ export default function AdminDashboard() {
         fetch('/api/admin/users')
             .then((res) => res.json())
             .then((data) => setUsers(data.users || []))
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    };
+
+    const fetchTests = () => {
+        setLoading(true);
+        fetch('/api/admin/tests')
+            .then((res) => res.json())
+            .then((data) => setTests(data.tests || []))
             .catch(console.error)
             .finally(() => setLoading(false));
     };
@@ -154,6 +179,43 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleUpload = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!file || !uploadDomain) {
+            alert("Please select a file and a domain.");
+            return;
+        }
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('domain', uploadDomain);
+        formData.append('negativeMarks', negativeMarks.toString());
+        formData.append('assignToAll', assignToAll.toString());
+        formData.append('assignToAllDomains', assignToAllDomains.toString());
+        formData.append('duration', duration.toString());
+
+        try {
+            const res = await fetch('/api/admin/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message);
+                setFile(null);
+                // Optional: reset other fields
+            } else {
+                alert(data.error);
+            }
+        } catch (err) {
+            alert('Upload failed.');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+
     const domains = [
         "Business Analytics",
         "Quality Assurance",
@@ -171,9 +233,44 @@ export default function AdminDashboard() {
                 </div>
                 <div className="space-x-4">
                     <Button variant={activeTab === 'results' ? 'default' : 'outline'} onClick={() => setActiveTab('results')}>Results</Button>
+                    <Button variant={activeTab === 'tests' ? 'default' : 'outline'} onClick={() => setActiveTab('tests')}>Tests</Button>
                     <Button variant={activeTab === 'users' ? 'default' : 'outline'} onClick={() => setActiveTab('users')}>Manage Users</Button>
+                    <Button variant={activeTab === 'upload' ? 'default' : 'outline'} onClick={() => setActiveTab('upload')}>Upload Questions</Button>
+                    <Button variant="destructive" onClick={() => signOut({ callbackUrl: '/login' })}>Logout</Button>
                 </div>
             </div>
+
+            {activeTab === 'tests' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>All Tests</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? <div className="text-center py-4">Loading...</div> : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Domain</TableHead>
+                                        <TableHead>Questions Count</TableHead>
+                                        <TableHead>Duration (mins)</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {tests.length === 0 ? (
+                                        <TableRow><TableCell colSpan={3} className="text-center">No tests found.</TableCell></TableRow>
+                                    ) : tests.map((t: any) => (
+                                        <TableRow key={t.domain}>
+                                            <TableCell className="font-medium">{t.domain}</TableCell>
+                                            <TableCell>{t.question_count}</TableCell>
+                                            <TableCell>{t.duration}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
 
             {activeTab === 'results' && (
                 <Card>
@@ -247,25 +344,7 @@ export default function AdminDashboard() {
                                 </form>
                             </CardContent>
                         </Card>
-
-                        {/* Assign Test */}
-                        <Card>
-                            <CardHeader><CardTitle>Assign Test</CardTitle></CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <p className="text-sm text-gray-500">
-                                        Assigning a test will use the domain set in the user's profile.
-                                    </p>
-                                    <form onSubmit={handleAssignTest} className="space-y-4">
-                                        <Input type="email" placeholder="User Email" value={assignment.email} onChange={e => setAssignment({ ...assignment, email: e.target.value })} required />
-                                        <Button type="submit" disabled={assigning} className="w-full">
-                                            {assigning ? 'Assigning...' : 'Assign Test'}
-                                        </Button>
-                                    </form>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                    </div> {/* End grid */}
 
                     {/* User List Table */}
                     <Card>
@@ -336,6 +415,97 @@ export default function AdminDashboard() {
                     </Dialog>
                 </div>
             )}
+
+            {/* Upload Questions Form */}
+            {
+                activeTab === 'upload' && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Upload Questions</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleUpload} className="space-y-4 max-w-lg">
+                                <div className="space-y-2">
+                                    <Label>Select Domain</Label>
+                                    <Select value={uploadDomain} onValueChange={setUploadDomain}>
+                                        <SelectTrigger><SelectValue placeholder="Select Domain" /></SelectTrigger>
+                                        <SelectContent>
+                                            {domains.map(d => <SelectItem key={d} value={d.toLowerCase().replace(/ /g, '-')}>{d}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Marks per Question</Label>
+                                    <Input type="number" min="1" value={marks} onChange={(e) => setMarks(parseInt(e.target.value))} />
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        id="negative-marking"
+                                        checked={negativeMarking}
+                                        onChange={(e) => setNegativeMarking(e.target.checked)}
+                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                    />
+                                    <Label htmlFor="negative-marking">Enable Negative Marking</Label>
+                                </div>
+
+                                {negativeMarking && (
+                                    <div className="space-y-2">
+                                        <Label>Negative Marks</Label>
+                                        <Input type="number" step="0.1" min="0" value={negativeMarks} onChange={(e) => setNegativeMarks(parseFloat(e.target.value))} />
+                                    </div>
+                                )}
+
+                                <div className="space-y-2">
+                                    <Label>Time to complete (minutes)</Label>
+                                    <Input type="number" min="1" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))} />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Upload Excel File (.xlsx)</Label>
+                                    <Input type="file" accept=".xlsx" onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} />
+                                    <p className="text-sm text-gray-500">Format: Question, Option1, Option2, Option3, Option4, CorrectAnswerIndex (0-3)</p>
+                                </div>
+
+                                <div className="space-y-4 pt-4 border-t">
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            id="assign-to-all"
+                                            checked={assignToAll}
+                                            onChange={(e) => {
+                                                setAssignToAll(e.target.checked);
+                                                if (e.target.checked) setAssignToAllDomains(false);
+                                            }}
+                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        />
+                                        <Label htmlFor="assign-to-all">Auto-assign to current users of this domain</Label>
+                                    </div>
+
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            id="assign-to-all-domains"
+                                            checked={assignToAllDomains}
+                                            onChange={(e) => {
+                                                setAssignToAllDomains(e.target.checked);
+                                                if (e.target.checked) setAssignToAll(false);
+                                            }}
+                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        />
+                                        <Label htmlFor="assign-to-all-domains">Assign to ALL (all domains)</Label>
+                                    </div>
+                                </div>
+
+                                <Button type="submit" disabled={uploading}>
+                                    {uploading ? 'Uploading...' : 'Upload Questions'}
+                                </Button>
+                            </form>
+                        </CardContent>
+                    </Card>
+                )}
         </div>
     );
 }

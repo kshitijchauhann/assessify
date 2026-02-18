@@ -44,6 +44,11 @@ async function migrate() {
         submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         -- Optionally link to users table later, but keeping independent for now or could add user_id Foreign Key
       );
+
+      CREATE TABLE IF NOT EXISTS test_configs (
+        domain VARCHAR(255) PRIMARY KEY,
+        duration_minutes INTEGER DEFAULT 30
+      );
     `);
 
     // Add column if it doesn't exist (using a safe approach for postgres)
