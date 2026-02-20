@@ -190,6 +190,7 @@ export default function AdminDashboard() {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('domain', uploadDomain);
+        formData.append('marks', marks.toString());
         formData.append('negativeMarks', negativeMarks.toString());
         formData.append('assignToAll', assignToAll.toString());
         formData.append('assignToAllDomains', assignToAllDomains.toString());
