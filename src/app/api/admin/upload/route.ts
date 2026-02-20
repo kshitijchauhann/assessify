@@ -67,6 +67,14 @@ export async function POST(request: Request) {
 
             await client.query('COMMIT');
 
+            // Update test duration
+            await client.query(`
+                INSERT INTO test_configs (domain, duration_minutes)
+                VALUES ($1, $2)
+                ON CONFLICT (domain) 
+                DO UPDATE SET duration_minutes = $2
+            `, [domain, duration]);
+
             // Bulk assignment logic
             if (assignToAll) {
                 // We need to release the previous client or start a new transaction? 
