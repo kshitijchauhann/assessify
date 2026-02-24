@@ -8,38 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import dynamic from 'next/dynamic';
 
-const ProctoredContext = createContext<any>({});
-
-// @ts-ignore
-const ProctorApp = dynamic(() => import('@newtonschool/react_proctoring_library').then(mod => {
-    console.log("REACT PROCTORING LIBRARY MOD:", mod);
-    const OriginalProctorApp = mod.ProctorApp || (mod.default && mod.default.ProctorApp);
-    const ProctoredContextApp = mod.ProctoredContextApp || (mod.default && mod.default.ProctoredContextApp);
-
-    return {
-        default: function WrappedProctorApp(props: any) {
-            const config = { proctorParams: props.proctoringParams || {} };
-
-            if (!OriginalProctorApp || !ProctoredContextApp) {
-                return <div>Proctoring library failed to load properly.</div>;
-            }
-
-            return (
-                <ProctoredContextApp contextProvider={ProctoredContext} config={config}>
-                    <OriginalProctorApp
-                        proctoredContext={ProctoredContext}
-                        config={config}
-                        proctoringIdentifier={props.proctoringIdentifier}
-                    >
-                        {props.children}
-                    </OriginalProctorApp>
-                </ProctoredContextApp>
-            );
-        }
-    };
-}), { ssr: false });
 
 // Helper to format time (MM:SS)
 const formatTime = (seconds: number) => {
@@ -60,12 +29,6 @@ export default function TestPage({ params }: { params: Promise<{ domain: string 
     // const [nameSubmitted, setNameSubmitted] = useState(false); // Removed
     const [submitting, setSubmitting] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
-    const [proctoringIdentifier, setProctoringIdentifier] = useState('');
-
-    useEffect(() => {
-        // Generate a unique identifier for proctoring session
-        setProctoringIdentifier(`${domain}-${Date.now()}`);
-    }, [domain]);
 
     // Fetch questions
     useEffect(() => {
@@ -163,81 +126,70 @@ export default function TestPage({ params }: { params: Promise<{ domain: string 
     }
 
     return (
-        // @ts-ignore
-        <ProctorApp
-            proctoringIdentifier={proctoringIdentifier}
-            proctoringParams={{
-                userCount: true,
-                tabSwitch: true,
-                fullscreenExit: true,
-                lookedAway: true
-            }}
-        >
-            <div className="container mx-auto py-10 px-4">
-                <div className="flex justify-between items-center mb-6 sticky top-0 bg-background z-10 py-4 border-b">
-                    <div className="flex items-center gap-4">
-                        <Image src="/assessifyLogo.svg" alt="Assessify Logo" width={120} height={32} className="h-8 w-auto" />
-                        <h1 className="text-2xl font-bold capitalize">{domain.replace('-', ' ')} Test</h1>
-                    </div>
-                    <div className={`text-xl font-mono ${timeLeft < 60 ? 'text-red-500' : ''}`}>
-                        Time Left: {formatTime(timeLeft)}
-                    </div>
+        <div className="container mx-auto py-10 px-4">
+            <div className="flex justify-between items-center mb-6 sticky top-0 bg-background z-10 py-4 border-b">
+                <div className="flex items-center gap-4">
+                    <Image src="/assessifyLogo.svg" alt="Assessify Logo" width={120} height={32} className="h-8 w-auto" />
+                    <h1 className="text-2xl font-bold capitalize">{domain.replace('-', ' ')} Test</h1>
                 </div>
-
-                <div className="mb-6 flex justify-between items-center bg-muted p-4 rounded-lg">
-                    <div>
-                        <h3 className="font-semibold text-lg">Question {currentStep + 1} of {questions.length}</h3>
-                    </div>
-                    <Progress value={((currentStep + 1) / questions.length) * 100} className="w-1/3 h-2" />
-                </div>
-
-                <div className="space-y-8">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">
-                                {questions[currentStep].question}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <RadioGroup
-                                value={answers[questions[currentStep].question] || ''}
-                                onValueChange={(val) => handleOptionSelect(questions[currentStep].question, val)}
-                            >
-                                {questions[currentStep].options.map((option: string, optIndex: number) => (
-                                    <div key={optIndex} className="flex items-center space-x-2 mb-4 p-2 rounded hover:bg-muted/50 transition-colors">
-                                        <RadioGroupItem value={option} id={`opt${optIndex}`} />
-                                        <Label htmlFor={`opt${optIndex}`} className="cursor-pointer font-normal w-full">
-                                            {option}
-                                        </Label>
-                                    </div>
-                                ))}
-                            </RadioGroup>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="mt-8 flex justify-between">
-                    <Button
-                        variant="outline"
-                        onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
-                        disabled={currentStep === 0 || submitting}
-                    >
-                        Previous
-                    </Button>
-
-                    {currentStep < questions.length - 1 ? (
-                        <Button
-                            onClick={() => setCurrentStep(prev => Math.min(questions.length - 1, prev + 1))}
-                        >
-                            Next
-                        </Button>
-                    ) : (
-                        <Button size="lg" onClick={handleSubmit} disabled={submitting}>
-                            {submitting ? 'Submitting...' : 'Submit Test'}
-                        </Button>
-                    )}
+                <div className={`text-xl font-mono ${timeLeft < 60 ? 'text-red-500' : ''}`}>
+                    Time Left: {formatTime(timeLeft)}
                 </div>
             </div>
-        </ProctorApp>
+
+            <div className="mb-6 flex justify-between items-center bg-muted p-4 rounded-lg">
+                <div>
+                    <h3 className="font-semibold text-lg">Question {currentStep + 1} of {questions.length}</h3>
+                </div>
+                <Progress value={((currentStep + 1) / questions.length) * 100} className="w-1/3 h-2" />
+            </div>
+
+            <div className="space-y-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg">
+                            {questions[currentStep].question}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <RadioGroup
+                            value={answers[questions[currentStep].question] || ''}
+                            onValueChange={(val) => handleOptionSelect(questions[currentStep].question, val)}
+                        >
+                            {questions[currentStep].options.map((option: string, optIndex: number) => (
+                                <div key={optIndex} className="flex items-center space-x-2 mb-4 p-2 rounded hover:bg-muted/50 transition-colors">
+                                    <RadioGroupItem value={option} id={`opt${optIndex}`} />
+                                    <Label htmlFor={`opt${optIndex}`} className="cursor-pointer font-normal w-full">
+                                        {option}
+                                    </Label>
+                                </div>
+                            ))}
+                        </RadioGroup>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="mt-8 flex justify-between">
+                <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+                    disabled={currentStep === 0 || submitting}
+                >
+                    Previous
+                </Button>
+
+                {currentStep < questions.length - 1 ? (
+                    <Button
+                        onClick={() => setCurrentStep(prev => Math.min(questions.length - 1, prev + 1))}
+                    >
+                        Next
+                    </Button>
+                ) : (
+                    <Button size="lg" onClick={handleSubmit} disabled={submitting}>
+                        {submitting ? 'Submitting...' : 'Submit Test'}
+                    </Button>
+                )}
+            </div>
+        </div>
     );
 }
