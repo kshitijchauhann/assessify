@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
         const effectiveCandidateName = session?.user?.name || candidateName;
         if (!effectiveCandidateName) {
-            return NextResponse.json({ error: 'Candidate name required' }, { status: 400 });
+            return NextResponse.json({ error: 'Unauthorized: You must be logged in to submit a test.' }, { status: 401 });
         }
 
         const allQuestions = domainMap[domain];
