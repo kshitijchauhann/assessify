@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, use } from 'react';
+import { useState, useEffect, useCallback, use, createContext } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,36 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import dynamic from 'next/dynamic';
 
+const ProctoredContext = createContext<any>({});
+
 // @ts-ignore
-const ProctorApp = dynamic(() => import('@newtonschool/react_proctoring_library').then(mod => mod.ProctorApp), { ssr: false });
+const ProctorApp = dynamic(() => import('@newtonschool/react_proctoring_library').then(mod => {
+    console.log("REACT PROCTORING LIBRARY MOD:", mod);
+    const OriginalProctorApp = mod.ProctorApp || (mod.default && mod.default.ProctorApp);
+    const ProctoredContextApp = mod.ProctoredContextApp || (mod.default && mod.default.ProctoredContextApp);
+
+    return {
+        default: function WrappedProctorApp(props: any) {
+            const config = { proctorParams: props.proctoringParams || {} };
+
+            if (!OriginalProctorApp || !ProctoredContextApp) {
+                return <div>Proctoring library failed to load properly.</div>;
+            }
+
+            return (
+                <ProctoredContextApp contextProvider={ProctoredContext} config={config}>
+                    <OriginalProctorApp
+                        proctoredContext={ProctoredContext}
+                        config={config}
+                        proctoringIdentifier={props.proctoringIdentifier}
+                    >
+                        {props.children}
+                    </OriginalProctorApp>
+                </ProctoredContextApp>
+            );
+        }
+    };
+}), { ssr: false });
 
 // Helper to format time (MM:SS)
 const formatTime = (seconds: number) => {
@@ -134,7 +162,6 @@ export default function TestPage({ params }: { params: Promise<{ domain: string 
         return <div className="text-center mt-20">No questions found for this domain.</div>;
     }
 
-    // Direct render, no name check
     return (
         // @ts-ignore
         <ProctorApp

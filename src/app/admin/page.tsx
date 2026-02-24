@@ -190,6 +190,8 @@ export default function AdminDashboard() {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('domain', uploadDomain);
+        formData.append('marks', marks.toString());
+        formData.append('negativeMarking', negativeMarking.toString());
         formData.append('negativeMarks', negativeMarks.toString());
         formData.append('assignToAll', assignToAll.toString());
         formData.append('assignToAllDomains', assignToAllDomains.toString());
@@ -430,6 +432,7 @@ export default function AdminDashboard() {
                                     <Select value={uploadDomain} onValueChange={setUploadDomain}>
                                         <SelectTrigger><SelectValue placeholder="Select Domain" /></SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="common">Common</SelectItem>
                                             {domains.map(d => <SelectItem key={d} value={d.toLowerCase().replace(/ /g, '-')}>{d}</SelectItem>)}
                                         </SelectContent>
                                     </Select>

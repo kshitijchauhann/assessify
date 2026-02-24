@@ -68,29 +68,28 @@ export async function POST(request: Request) {
             await client.query('COMMIT');
 
             // Bulk assignment logic
-            if (assignToAll) {
-                // We need to release the previous client or start a new transaction? 
-                // Actually we committed above, so we can start new transaction or just run queries.
-                // Re-using client for assignment
-                // We want to assign this test to ALL users who:
-                // 1. Have this domain
-                // 2. Do NOT already have a 'pending' or 'completed' assignment for this domain?
-                // The requirement says "Assign to all". 
-                // Let's Insert into assignments if not exists.
-
-                // Note: The questions are uploaded to the bank. The Assignment is just a record in 'assignments' table 
-                // linking user_id and domain. The test generation happens at runtime (GET /api/questions).
-
-                // It's safer to do this in a separate try/catch or just log if it fails, 
-                // but since user checked it, we should probably try hard.
-
+            if (assignToAll || assignToAllDomains) {
                 try {
                     await client.query('BEGIN');
-                    const assignmentQuery = `
+                    const assignmentQuery = assignToAllDomains
+                        ? `
+                        INSERT INTO assignments (user_id, domain, status)
+                        SELECT id, $1, 'pending'
+                        FROM users
+                        WHERE role = 'user'
+                        AND NOT EXISTS (
+                            SELECT 1 FROM assignments 
+                            WHERE user_id = users.id 
+                            AND domain = $1
+                            AND (status = 'pending' OR status = 'completed')
+                        )
+                        `
+                        : `
                         INSERT INTO assignments (user_id, domain, status)
                         SELECT id, $1, 'pending'
                         FROM users
                         WHERE domain = $1
+                        AND role = 'user'
                         AND NOT EXISTS (
                             SELECT 1 FROM assignments 
                             WHERE user_id = users.id 
@@ -100,11 +99,10 @@ export async function POST(request: Request) {
                      `;
                     const assignResult = await client.query(assignmentQuery, [domain]);
                     await client.query('COMMIT');
-                    console.log(`Auto-assigned test to ${assignResult.rowCount} users in domain ${domain}`);
+                    console.log(`Auto-assigned test to ${assignResult.rowCount} users for domain ${domain}`);
                 } catch (assignErr) {
                     await client.query('ROLLBACK');
                     console.error('Auto-assignment failed:', assignErr);
-                    // We don't fail the whole upload if assignment fails, but we could return a warning.
                 }
             }
 
