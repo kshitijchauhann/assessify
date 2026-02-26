@@ -429,7 +429,7 @@ export default function AdminDashboard() {
                             <form onSubmit={handleUpload} className="space-y-4 max-w-lg">
                                 <div className="space-y-2">
                                     <Label>Select Domain</Label>
-                                    <Select value={uploadDomain} onValueChange={setUploadDomain}>
+                                    <Select value={uploadDomain} onValueChange={(val) => { setUploadDomain(val); setAssignToAll(false); setAssignToAllDomains(false); }}>
                                         <SelectTrigger><SelectValue placeholder="Select Domain" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="common">Common</SelectItem>
@@ -473,33 +473,37 @@ export default function AdminDashboard() {
                                 </div>
 
                                 <div className="space-y-4 pt-4 border-t">
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            id="assign-to-all"
-                                            checked={assignToAll}
-                                            onChange={(e) => {
-                                                setAssignToAll(e.target.checked);
-                                                if (e.target.checked) setAssignToAllDomains(false);
-                                            }}
-                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                        />
-                                        <Label htmlFor="assign-to-all">Auto-assign to current users of this domain</Label>
-                                    </div>
+                                    {uploadDomain !== 'common' && (
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                id="assign-to-all"
+                                                checked={assignToAll}
+                                                onChange={(e) => {
+                                                    setAssignToAll(e.target.checked);
+                                                    if (e.target.checked) setAssignToAllDomains(false);
+                                                }}
+                                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                            />
+                                            <Label htmlFor="assign-to-all">Auto-assign to users of this domain</Label>
+                                        </div>
+                                    )}
 
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            id="assign-to-all-domains"
-                                            checked={assignToAllDomains}
-                                            onChange={(e) => {
-                                                setAssignToAllDomains(e.target.checked);
-                                                if (e.target.checked) setAssignToAll(false);
-                                            }}
-                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                        />
-                                        <Label htmlFor="assign-to-all-domains">Assign to ALL (all domains)</Label>
-                                    </div>
+                                    {uploadDomain === 'common' && (
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                id="assign-to-all-domains"
+                                                checked={assignToAllDomains}
+                                                onChange={(e) => {
+                                                    setAssignToAllDomains(e.target.checked);
+                                                    if (e.target.checked) setAssignToAll(false);
+                                                }}
+                                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                            />
+                                            <Label htmlFor="assign-to-all-domains">Assign to ALL users (all domains)</Label>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <Button type="submit" disabled={uploading}>
