@@ -38,7 +38,14 @@ export async function POST(request: Request) {
 
         // Validate format based on first row
         const firstRow = data[0] as any;
-        if (!firstRow.Question || !firstRow.Option1 || !firstRow.Option2 || !firstRow.Option3 || !firstRow.Option4 || firstRow.CorrectAnswerIndex === undefined) {
+        if (
+            firstRow.Question === undefined || firstRow.Question === null ||
+            firstRow.Option1 === undefined || firstRow.Option1 === null ||
+            firstRow.Option2 === undefined || firstRow.Option2 === null ||
+            firstRow.Option3 === undefined || firstRow.Option3 === null ||
+            firstRow.Option4 === undefined || firstRow.Option4 === null ||
+            firstRow.CorrectAnswerIndex === undefined || firstRow.CorrectAnswerIndex === null
+        ) {
             return NextResponse.json({ error: 'Invalid Excel format. Headers must be: Question, Option1, Option2, Option3, Option4, CorrectAnswerIndex' }, { status: 400 });
         }
 
@@ -49,11 +56,11 @@ export async function POST(request: Request) {
             for (const row of data as any[]) {
                 if (!row.Question) continue; // Skip empty rows
 
-                const options = [row.Option1, row.Option2, row.Option3, row.Option4];
+                const options = [String(row.Option1), String(row.Option2), String(row.Option3), String(row.Option4)];
                 const correctAnswerIndex = parseInt(row.CorrectAnswerIndex);
 
                 // Basic validation for row data
-                if (options.some(opt => opt === undefined || opt === null) || isNaN(correctAnswerIndex) || correctAnswerIndex < 0 || correctAnswerIndex > 3) {
+                if (options.some(opt => opt === 'undefined' || opt === 'null') || isNaN(correctAnswerIndex) || correctAnswerIndex < 0 || correctAnswerIndex > 3) {
                     // Can either skip or error. For bulk upload, maybe erroring is safer to ensure data integrity
                     throw new Error(`Invalid data for question: "${row.Question}". Check options and correct answer index.`);
                 }
@@ -64,6 +71,14 @@ export async function POST(request: Request) {
                     [row.Question, JSON.stringify(options), correctAnswerIndex, domain, marks, negativeMarks]
                 );
             }
+
+            // Save or update the test duration in test_configs
+            await client.query(
+                `INSERT INTO test_configs (domain, duration_minutes) 
+                 VALUES ($1, $2) 
+                 ON CONFLICT (domain) DO UPDATE SET duration_minutes = $2`,
+                [domain, duration]
+            );
 
             await client.query('COMMIT');
 

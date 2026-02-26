@@ -38,8 +38,8 @@ export async function GET(request: Request) {
 
         // Randomize options logic from before (optional but good for anti-cheating)
         const randomizedQuestions = questions.map((q: any) => {
-            const optionsWithIndices = q.options.map((opt: string, index: number) => ({
-                text: opt,
+            const optionsWithIndices = q.options.map((opt: any, index: number) => ({
+                text: String(opt),
                 originalIndex: index,
             }));
             const shuffledOptions = optionsWithIndices.sort(() => 0.5 - Math.random());
