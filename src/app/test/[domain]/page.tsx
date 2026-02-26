@@ -126,7 +126,14 @@ export default function TestPage({ params }: { params: Promise<{ domain: string 
     }
 
     return (
-        <div className="container mx-auto py-10 px-4">
+        <div
+            className="container mx-auto py-10 px-4"
+            style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+            onCopy={(e) => e.preventDefault()}
+            onCut={(e) => e.preventDefault()}
+            onPaste={(e) => e.preventDefault()}
+            onContextMenu={(e) => e.preventDefault()}
+        >
             <div className="flex justify-between items-center mb-6 sticky top-0 bg-background z-10 py-4 border-b">
                 <div className="flex items-center gap-4">
                     <Image src="/assessifyLogo.svg" alt="Assessify Logo" width={120} height={32} className="h-8 w-auto" />
