@@ -82,10 +82,10 @@ export async function POST(request: Request) {
 
             await client.query('COMMIT');
 
-            // Bulk assignment logic
+            // Bulk assignment logic — use a FRESH client to avoid connection issues after COMMIT
             if (assignToAll || assignToAllDomains) {
+                const assignClient = await pool.connect();
                 try {
-                    await client.query('BEGIN');
                     const assignmentQuery = assignToAllDomains
                         ? `
                         INSERT INTO assignments (user_id, domain, status)
@@ -96,7 +96,6 @@ export async function POST(request: Request) {
                             SELECT 1 FROM assignments 
                             WHERE user_id = users.id 
                             AND domain = $1
-                            AND (status = 'pending' OR status = 'completed')
                         )
                         `
                         : `
@@ -109,15 +108,14 @@ export async function POST(request: Request) {
                             SELECT 1 FROM assignments 
                             WHERE user_id = users.id 
                             AND domain = $1
-                            AND (status = 'pending' OR status = 'completed')
                         )
                      `;
-                    const assignResult = await client.query(assignmentQuery, [domain]);
-                    await client.query('COMMIT');
+                    const assignResult = await assignClient.query(assignmentQuery, [domain]);
                     console.log(`Auto-assigned test to ${assignResult.rowCount} users for domain ${domain}`);
                 } catch (assignErr) {
-                    await client.query('ROLLBACK');
                     console.error('Auto-assignment failed:', assignErr);
+                } finally {
+                    assignClient.release();
                 }
             }
 
